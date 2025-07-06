@@ -99,7 +99,27 @@ sudo nginx -t
 sudo systemctl reload nginx
 sudo certbot --nginx -d api.taycodejava.id.vn
 
+| Tên bản ghi                       | Loại bản ghi  | Giá trị bản ghi | TTL      |
+| --------------------------------- | ------------- | --------------- | -------- |
+| **[www.admin](http://www.admin)** | A (IPv4)      | 34.87.106.55    | 5 phút   |
+| **admin**                         | A (IPv4)      | 34.87.106.55    | 5 phút   |
+| **@**                             | A (IPv4)      | 34.87.106.55    | 360 giây |
+| **api**                           | A (IPv4)      | 34.87.106.55    | 5 phút   |
+| **www**                           | CNAME (Alias) | dupssapp.id.vn  | 5 phút   |
 
+
+✅ Các bản ghi này đã trỏ đúng về IP 34.87.106.55 (có thể là VM của bạn).
+Bạn hoàn toàn có thể dùng các subdomain sau:
+
+https://admin.dupssapp.id.vn
+
+https://api.dupssapp.id.vn
+
+https://dupssapp.id.vn
+
+https://www.dupssapp.id.vn
+
+⚠️ Lưu ý: Đảm bảo bạn đã cài đặt Nginx reverse proxy và cấp SSL tương ứng với các domain/subdomain nếu dùng HTTPS.
 
 
 
