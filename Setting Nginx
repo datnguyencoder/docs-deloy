@@ -74,6 +74,32 @@ Kiểm tra SSL tại: https://www.ssllabs.com/ssltest/
 ------------
 phía BE 
 
+sudo nano /etc/nginx/sites-available/api.datdev.com
+
+server {
+    listen 80;
+    server_name api.datdev.com;
+    
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+sudo nginx -t
+sudo systemctl reload nginx
+
+docker restart <container_id_of_backend>
+
+sudo ln -s /etc/nginx/sites-available/api.taycodejava.id.vn /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d api.taycodejava.id.vn
+
+
 
 
 
