@@ -1,0 +1,174 @@
+                          Dockerfile (BACK-END)
+# Stage 1: build
+# Sử dụng image Maven tích hợp sẵn JDK 21 để build ứng dụng
+FROM maven:3.9.9-amazoncorretto-21 AS build
+# Tạo thư mục làm việc bên trong container
+WORKDIR /app
+# Sao chép file pom.xml (định nghĩa dependency và cấu hình build)
+COPY pom.xml .
+# Sao chép toàn bộ mã nguồn từ thư mục src vào container
+COPY src ./src
+# Build ứng dụng và tạo file .jar, bỏ qua unit tests để tăng tốc độ
+RUN mvn package -DskipTests
+# Stage 2: create image
+# Dùng image nhẹ hơn chỉ có JDK 21 để chạy ứng dụng (không cần Maven)
+FROM amazoncorretto:21.0.6
+# Tạo lại thư mục làm việc trong container runtime
+WORKDIR /app
+# Copy file .jar đã build ở stage trước vào container này
+COPY --from=build /app/target/*.jar app.jar
+# Chạy ứng dụng bằng lệnh java -jar app.jar khi container khởi động
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+----------------- docker-compose.yml (BACK_END)------------------
+
+services:
+  mysql:
+    image: mysql:8.0-debian                     # Sử dụng image MySQL 8 chính thức chạy trên Debian
+    container_name: mysql                      # Đặt tên container là mysql để dễ tham chiếu
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456              # Mật khẩu cho tài khoản root của MySQL
+      MYSQL_DATABASE: dupss_db                 # Tạo sẵn database tên dupss_db khi container khởi chạy
+    ports:
+      - "3307:3306"                            # Ánh xạ cổng 3306 trong container ra cổng 3307 trên máy host
+    volumes:
+      - mysql_data:/var/lib/mysql              # Gắn volume để lưu dữ liệu MySQL vĩnh viễn
+    networks:
+      - dupss-network                          # Kết nối container này với mạng nội bộ dupss-network
+
+  backend:
+    image: datdevv/dupss:1.0.1                 # Image Spring Boot đã build sẵn từ Docker Hub
+    container_name: dupss-backend              # Đặt tên container là dupss-backend
+    ports:
+      - "8080:8080"                            # Ánh xạ cổng 8080 của container ra cổng 8080 trên máy host
+    environment:
+      SPRING_PROFILES_ACTIVE: prod             # Kích hoạt profile Spring Boot 'prod'
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dupss_db     # Kết nối đến MySQL qua tên container 'mysql'
+      SPRING_DATASOURCE_USERNAME: root         # Tên tài khoản DB
+      SPRING_DATASOURCE_PASSWORD: 123456       # Mật khẩu DB
+    depends_on:
+      - mysql                                  # Đảm bảo MySQL khởi chạy trước khi backend bắt đầu
+    networks:
+      - dupss-network                          # Kết nối backend với mạng nội bộ dupss-network
+
+volumes:
+  mysql_data:                                  # Volume dùng để lưu dữ liệu của MySQL
+
+networks:
+  dupss-network:                               # Định nghĩa mạng nội bộ giữa các container
+    driver: bridge                             # Sử dụng driver kiểu bridge (mặc định trong Docker)
+------------------- Dockerfile (FRONT END -  REACTJS - VITE ) ---------
+# Sử dụng image Node.js 21 dựa trên Alpine Linux (nhẹ, tối ưu)
+FROM node:21-alpine AS build
+# Tạo thư mục làm việc trong container
+WORKDIR /app
+# Sao chép các file cấu hình package.json và package-lock.json (nếu có)
+COPY package*.json ./
+# Cài đặt toàn bộ dependencies được khai báo trong package.json
+RUN npm install
+# Sao chép toàn bộ mã nguồn vào container
+COPY . .
+# Mở cổng 5173 (mặc định của Vite dev server)
+EXPOSE 5173
+# Chạy ứng dụng ở chế độ phát triển, và cho phép truy cập từ các máy khác (qua --host)
+CMD ["npm", "run", "dev", "--", "--host"]
+-------------------- docker-compose (FE)-------------
+version: "3.8"  # Sử dụng phiên bản Docker Compose 3.8 (tương thích tốt với Docker hiện tại)
+
+services:
+  frontend:
+    build:
+      context: .                     # Thư mục chứa Dockerfile (dấu . là thư mục hiện tại)
+      dockerfile: Dockerfile        # Tên file Dockerfile để build image
+    image: datdev/dupss:2.0.0        # Tên image sẽ tạo sau khi build (dùng để push lên Docker Hub nếu muốn)
+    container_name: dupss-frontend   # Tên container khi chạy
+    ports:
+      - "5173:5173"                 # Ánh xạ cổng 5173 của container ra cổng 5173 máy host (Vite dev server)
+    restart: unless-stopped         # Tự khởi động lại trừ khi bạn stop container thủ công
+    networks:
+      - dupss-network               # Kết nối container này vào mạng nội bộ dupss-network
+
+networks:
+  dupss-network:
+    driver: bridge                  # Tạo mạng bridge (dạng nội bộ) cho các container giao tiếp với nhau
+    -------------------------------------------------
+    // Cấu hình Vite để build và deploy ứng dụng React
+
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react'
+
+// // https://vite.dev/config/
+// export default defineConfig({
+//   plugins: [react()],                         // Kích hoạt plugin hỗ trợ React (JSX, Fast Refresh, v.v.)
+
+//   server: {
+//     host: true,                               // Cho phép máy khác truy cập Vite dev server (thường dùng trong Docker)
+//     allowedHosts: ['dupssapp.id.vn'],         // Chỉ cho phép domain cụ thể truy cập (bảo mật khi deploy)
+
+//     proxy: {
+//       '/api': {
+//         target: 'http://localhost:8080',      // Chuyển các request `/api` đến backend Spring Boot đang chạy local
+//         changeOrigin: true,                   // Giả mạo origin để phù hợp với server đích
+//         secure: false                         // Cho phép proxy tới server HTTP không có SSL (dùng cho dev)
+//       }
+//     }
+//   }
+// })
+
+---------------- Dockerfile và docker-compose admin ----------
+FROM node:21-alpine AS build
+
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev", "--", "--host"]
+
+--------------
+version: "3.8"
+
+services:
+  admin-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: datdev/dupss:3.0.0
+    container_name: dupss-frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - dupss-network
+
+networks:
+  dupss-network:
+    driver: bridge
+
+    ----------------
+    //deloy
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react'
+
+// export default defineConfig({
+//   plugins: [react()],
+//   server: {
+//     host: true, // Cho phép nhận kết nối từ bên ngoài (IP/domain)
+//     port: 3000, // Đảm bảo Vite chạy đúng cổng bạn dùng
+//     allowedHosts: ['admin.dupssapp.id.vn'], // Chỉ cho phép domain admin truy cập
+//     proxy: {
+//       '/api': {
+//         target: 'http://localhost:8080', // Proxy sang backend
+//         changeOrigin: true,
+//         secure: false
+//       }
+//     }
+//   }
+// })
+
+
