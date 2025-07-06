@@ -1,1 +1,54 @@
+Setup Xong Dockerfile - docker-compose 
+--
+docker build -t tên:1.0.0 .    // lệnh build docker 
+
+EX : docker build -t datnguyen:1.0.0 . 
+
+docker tag datnguyen:1.0.0 datdevv/datnguyen:1.0.0
+
+docker push datdev/datnguyen:1.0.0 
+
+docker composer up -d // Chạy toàn bộ hệ thống Docker theo file docker-compose.yml
+
+-----
+Triển Khai Môi Trường Cloud (Google Cloud)
+ Create Instance 
+SetUp Docker Trong VM 
+sudo apt update
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+sudo apt update
+sudo apt install docker-ce -y
+
+# Kiểm tra version
+docker --version
+
+----
+cài docker compose
+
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Kiểm tra
+docker-compose --version
+------------------------ 
+
+setup docker-compose ở môi trường VM : nano 
+nano docker-compose.yml
+Ctrl + O + Enter + Ctrl X
+---------------
+sudo docker pull datdevv/datnguyen:1.0.0 
+kiểm tra image đã tồn tại chưa : 
+sudo docker ps
+--------
+Mở Port và CORS cho các Domain : FireWall On Google Cloud 
+-----------
+
+
+
 
