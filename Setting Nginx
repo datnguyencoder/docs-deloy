@@ -1,0 +1,79 @@
+CẤU HÌNH NGINX + HTTPS CHO ỨNG DỤNG FRONTEND REACT (PORT 3000)
+🎯 Mục tiêu:
+Truy cập http://www.datdev.com sẽ tự chuyển thành https://www.datdev.com
+
+Ẩn port 3000, người dùng không cần gõ :3000
+
+Sử dụng Nginx làm reverse proxy và Certbot để cấp chứng chỉ HTTPS
+
+-----------------------------------
+Cài đặt Nginx
+sudo apt update
+sudo apt install nginx -y
+
+Kiểm tra trạng thái Nginx:
+sudo systemctl status nginx
+Nếu chưa chạy:
+sudo systemctl start nginx
+sudo systemctl enable nginx
+Cấu hình Nginx làm reverse proxy
+sudo nano /etc/nginx/sites-available/datdev.com
+cấu hình 
+server {
+    listen 80;
+    server_name datdev.com www.datdev.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+Kích hoạt site:
+sudo ln -s /etc/nginx/sites-available/datdev.com /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default   # Xóa default để tránh xung đột
+
+Kiểm tra và restart Nginx:
+sudo nginx -t
+sudo systemctl restart nginx
+
+Đảm bảo port 80 không bị chiếm
+
+sudo lsof -i :80
+sudo kill -9 <PID>
+
+Kiểm tra HTTP
+Cài Certbot & bật HTTPS
+sudo apt install certbot python3-certbot-nginx -y
+
+
+sudo certbot --nginx -d datdev.com -d www.datdev.com
+Nhập email
+
+Đồng ý điều khoản (ấn A)
+
+Chọn 2 để tự động redirect HTTP → HTTPS
+
+Kiểm tra HTTPS
+Truy cập:
+
+https://datdev.com
+
+https://www.datdev.com
+
+Kiểm tra:
+
+Có biểu tượng ổ khóa 🔒
+
+Kiểm tra SSL tại: https://www.ssllabs.com/ssltest/
+
+
+------------
+phía BE 
+
+
+
+
